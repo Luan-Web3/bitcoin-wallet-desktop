@@ -1,12 +1,17 @@
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QTabWidget, QLabel, QPushButton, QLineEdit, QComboBox, QHBoxLayout
 from PyQt5.QtCore import Qt
 from wallet_manager_mock import get_addresses, get_balance, send_crypto, create_new_address
+from wallet_manager import WalletManager
 
 class CryptoWalletUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Crypto Wallet")
         self.setGeometry(100, 100, 800, 600)
+
+        # client = WalletManager()
+        # balance = client.get_balance_for_address("bcrt1qxa9uhfyw885z7ce7z3hxj9fn62cq45e73fkj7q")
+        # new_address = client.create_new_address()
 
         # Main 
         self.tabs = QTabWidget()
