@@ -1,7 +1,6 @@
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 import os
 from dotenv import load_dotenv
-from decimal import Decimal
 
 class WalletManager:
     def __init__(self, rpc_wallet: str):
@@ -12,7 +11,6 @@ class WalletManager:
             rpc_password = os.getenv("RPC_PASSWORD")
             rpc_host = os.getenv("RPC_HOST")
             rpc_port = os.getenv("RPC_PORT")
-            # rpc_wallet = os.getenv("RPC_WALLET")
             rpc_url = f"http://{rpc_user}:{rpc_password}@{rpc_host}:{rpc_port}/wallet/{rpc_wallet}"
             self.__rpc_connection = AuthServiceProxy(rpc_url)
             self.__selected_address = None
@@ -72,8 +70,9 @@ class WalletManager:
             print(f"Erro inesperado: {e}")
             raise
 
-    def generate_to_address(self, mining_address: str) -> list:
+    def generate_to_address(self) -> list:
         try:
+            mining_address = os.getenv("MINING_ADDRESS")
             return self.__rpc_connection.generatetoaddress(1, mining_address)
         except Exception as e:
             print(f"Erro ao minerar bloco: {e}")
@@ -81,13 +80,21 @@ class WalletManager:
 
     def send_to_address(self, recipient_address: str, amount: float, tax: float) -> str:
         try:
+            print("Amount")
+            print(amount)
             utxos = self.__get_utxos()
             inputs, total_utxos = self.__select_utxos(utxos, amount, tax)
+            print("1 ----------")
+            print(total_utxos)
             outputs = self.__create_outputs(recipient_address, amount, total_utxos, tax)
-            raw_tx = self.__create_raw_transaction(inputs, outputs)
-            signed_tx = self.__sign_transaction(raw_tx)
-            txid = self.__broadcast_transaction(signed_tx)
-            return txid
+
+            print("Inputs e Outputs")
+            print(inputs)
+            print(outputs)
+            # raw_tx = self.__create_raw_transaction(inputs, outputs)
+            # signed_tx = self.__sign_transaction(raw_tx)
+            # txid = self.__broadcast_transaction(signed_tx)
+            return "txid"
         except Exception as e:
             print(f"Erro na transação: {e}")
             return None
@@ -114,8 +121,12 @@ class WalletManager:
 
     def __create_outputs(self, recipient_address: str, amount: float, total_utxos: float, tax: float) -> dict:
         change = total_utxos - (amount + tax)
+        print("2 ----------")
+        print(change)
         outputs = {recipient_address: amount}
         if change > 0:
+            print("3 ----------")
+            print(round(change, 8))
             outputs[self.__selected_address] = round(change, 8)
         return outputs
 
