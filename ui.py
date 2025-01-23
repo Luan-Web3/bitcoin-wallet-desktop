@@ -10,6 +10,8 @@ from PyQt5.QtWidgets import (
     QMessageBox,
 )
 from wallet_manager import WalletManager
+import os
+from dotenv import load_dotenv
 from decimal import Decimal
 
 # address("bcrt1qxa9uhfyw885z7ce7z3hxj9fn62cq45e73fkj7q")
@@ -17,11 +19,15 @@ from decimal import Decimal
 
 class CryptoWalletUI(QMainWindow):
     def __init__(self):
+        load_dotenv()
+
+        rpc_wallet = os.getenv("RPC_WALLET")
+
         super().__init__()
         self.setWindowTitle("Crypto Wallet")
         self.setGeometry(100, 100, 800, 600)
 
-        self.wallet_manager = WalletManager()
+        self.wallet_manager = WalletManager(rpc_wallet)
 
         # Main
         self.tabs = QTabWidget()
@@ -204,7 +210,7 @@ class CryptoWalletUI(QMainWindow):
 
     def update_addresses(self):
         try:
-            addresses = self.wallet_manager.rpc_connection.getaddressesbylabel("")
+            addresses = self.wallet_manager.get_addresses_by_label()
             self.address_select.clear()
             self.address_select.addItems(list(addresses.keys()))
         except Exception as e:
@@ -220,12 +226,11 @@ class CryptoWalletUI(QMainWindow):
             QMessageBox.critical(self, "Erro", f"Erro ao gerar novo endereço: {e}")
 
     def handle_send(self):
-        sender_address = self.address_select.currentText()
         recipient_address = self.recipient_input.text()
         amount = Decimal(self.amount_input.text())
 
         try:
-            txid = self.wallet_manager.rpc_connection.sendtoaddress(
+            txid = self.wallet_manager.send_to_address(
                 recipient_address, amount
             )
             self.transaction_label.setText(
