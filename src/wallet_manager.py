@@ -16,27 +16,29 @@ class WalletManager:
             self.__selected_address = None
 
             blockchain_info = self.__rpc_connection.getblockchaininfo()
-            print("Conexão bem-sucedida ao Bitcoin Core")
-            print("Informações do blockchain:", blockchain_info)
+            print(f"Connected to Bitcoin Core")
+            print(f"Blockchain info: {blockchain_info}")
             print("--------")
 
         except JSONRPCException as e:
-            print(f"Erro na conexão RPC: {e}")
+            print(f"Error connecting to RPC: {e}")
             raise
         except Exception as e:
-            print(f"Erro inesperado: {e}")
+            print(f"Unexpected error: {e}")
             raise
 
     def get_balance_for_address(self, address: str) -> float:
         try:
             self.__selected_address = address
-            return self.__rpc_connection.getreceivedbyaddress(address)
+            utxos = self.__get_utxos()
+            total_balance = sum(float(utxo["amount"]) for utxo in utxos)
+            return total_balance
 
         except JSONRPCException as e:
-            print(f"Erro ao obter o saldo do endereço {address}: {e}")
+            print(f"Error getting balance for address {address}: {e}")
             raise
         except Exception as e:
-            print(f"Erro inesperado: {e}")
+            print(f"Unexpected error: {e}")
             raise
 
     def create_new_address(self) -> str:
@@ -44,38 +46,45 @@ class WalletManager:
             return self.__rpc_connection.getnewaddress()
 
         except JSONRPCException as e:
-            print(f"Erro ao criar novo endereço: {e}")
+            print(f"Error creating new address: {e}")
             raise
         except Exception as e:
-            print(f"Erro inesperado: {e}")
+            print(f"Unexpected error: {e}")
             raise
 
     def get_addresses_by_label(self) -> dict:
         try:
             return self.__rpc_connection.getaddressesbylabel("")
         except JSONRPCException as e:
-            print(f"Erro ao obter endereços: {e}")
+            print(f"Error getting addresses: {e}")
             raise
         except Exception as e:
-            print(f"Erro inesperado: {e}")
+            print(f"Unexpected error: {e}")
             raise
 
     def get_raw_mempool(self) -> list:
         try:
             return self.__rpc_connection.getrawmempool(False)
         except JSONRPCException as e:
-            print(f"Erro ao obter o mempool: {e}")
+            print(f"Error getting mempool: {e}")
             raise
         except Exception as e:
-            print(f"Erro inesperado: {e}")
+            print(f"Unexpected error: {e}")
             raise
 
     def generate_to_address(self) -> list:
         try:
             mining_address = os.getenv("MINING_ADDRESS")
-            return self.__rpc_connection.generatetoaddress(1, mining_address)
+            return self.__rpc_connection.generatetoaddress(os.getenv("BLOCKS_TO_GENERATE"), mining_address)
         except Exception as e:
-            print(f"Erro ao minerar bloco: {e}")
+            print(f"Unexpected error: {e}")
+            raise
+
+    def get_transaction_by_txid(self, txid: str) -> dict:
+        try:
+            return self.__rpc_connection.gettransaction(txid)
+        except Exception as e:
+            print(f"Unexpected error: {e}")
             raise
 
     def send_to_address(self, recipient_address: str, amount: float, tax: float) -> str:
@@ -88,13 +97,11 @@ class WalletManager:
             txid = self.__broadcast_transaction(signed_tx)
             return txid
         except Exception as e:
-            print(f"Erro na transação: {e}")
+            print(f"Unexpected error: {e}")
             return None
 
     def __get_utxos(self) -> list:
         utxos = self.__rpc_connection.listunspent(0, 9999999, [self.__selected_address])
-        if not utxos:
-            raise ValueError(f"Não há UTXOs disponíveis para o endereço: {self.__selected_address}")
         return utxos
 
     def __select_utxos(self, utxos: list, amount: float, tax: float) -> tuple:
@@ -107,7 +114,7 @@ class WalletManager:
                 break
 
         if total_utxos < (amount + tax):
-            raise ValueError(f"Saldo insuficiente. Total disponível: {total_utxos} BTC.")
+            raise ValueError(f"Insufficient balance. Total available: {total_utxos} BTC.")
 
         return inputs, total_utxos
 
@@ -124,7 +131,7 @@ class WalletManager:
     def __sign_transaction(self, raw_tx: str) -> dict:
         signed_tx = self.__rpc_connection.signrawtransactionwithwallet(raw_tx)
         if not signed_tx.get("complete", False):
-            raise ValueError("Erro ao assinar a transação.")
+            raise ValueError("Error signing transaction.")
         return signed_tx
 
     def __broadcast_transaction(self, signed_tx: dict) -> str:
