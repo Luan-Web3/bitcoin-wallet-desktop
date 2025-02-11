@@ -75,7 +75,8 @@ class WalletManager:
     def generate_to_address(self) -> list:
         try:
             mining_address = os.getenv("MINING_ADDRESS")
-            return self.__rpc_connection.generatetoaddress(os.getenv("BLOCKS_TO_GENERATE"), mining_address)
+            blocks_to_generate = int(os.getenv("BLOCKS_TO_GENERATE"))
+            return self.__rpc_connection.generatetoaddress(blocks_to_generate, mining_address)
         except Exception as e:
             print(f"Unexpected error: {e}")
             raise
